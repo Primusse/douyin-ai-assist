@@ -80,7 +80,7 @@ AI回复: @路人甲 朋友，W是黄金圣盾！开盾减速还能加护甲~
 ### 安装
 
 ```bash
-git clone https://github.com/your-username/douyin-live-ai.git
+git clone https://github.com/Primusse/douyin-ai-assist.git
 cd douyin-live-ai
 pip install -r requirements.txt
 ```
