@@ -18,7 +18,7 @@ JS_DIR = os.path.join(PROJECT_ROOT, "js")
 
 # ==================== 直播间配置 ====================
 # 抖音直播间ID（URL最后的数字，如 https://live.douyin.com/349873582969）
-ROOM_ID = ""
+ROOM_ID = "your_room_id"
 
 # 直播类型: "ecommerce"(电商), "education"(教育), "entertainment"(娱乐)
 LIVE_TYPE = "entertainment"
@@ -69,6 +69,10 @@ REPLY_FILE = os.path.join(DATA_DIR, "ai_replies.jsonl")
 # 是否启用 TTS（True=AI回复自动朗读，False=仅文字输出）
 TTS_ENABLED = True
 
+# TTS 引擎选择: "edge"（微软 Edge TTS，免费）, "mimo"（小米 MiMo TTS，需 API Key）
+TTS_ENGINE = "mimo"
+
+# ----- Edge TTS 配置（TTS_ENGINE="edge" 时生效）-----
 # 语音角色（微软 Edge TTS 中文语音）
 # 可选:
 #   zh-CN-XiaoxiaoNeural  — 女声，自然亲切（推荐）
@@ -79,6 +83,36 @@ TTS_VOICE = "zh-CN-XiaoyiNeural"
 
 # 语速调节 ("+0%" 正常, "+20%" 加速, "-20%" 减速)
 TTS_RATE = "+0%"
+
+# ----- 小米 MiMo TTS 配置（TTS_ENGINE="mimo" 时生效）-----
+# API Key，在 https://platform.xiaomimimo.com/#/console/api-keys 创建
+# 推荐通过环境变量设置：set MIMO_API_KEY=mimo-xxxx
+# 也可以直接输入：MIMO_API_KEY = os.environ.get("MIMO_API_KEY", "mimo-xxxx")
+MIMO_API_KEY = os.environ.get("MIMO_API_KEY", "")
+
+# API 地址
+# 按量付费: https://api.xiaomimimo.com/v1
+MIMO_API_BASE_URL = "https://api.xiaomimimo.com/v1"
+
+# TTS 模型选择:
+#   mimo-v2.5-tts             — 预设音色模式（需配置 MIMO_TTS_VOICE + MIMO_TTS_STYLE）
+#   mimo-v2.5-tts-voicedesign — 文字描述音色（只需配置 MIMO_TTS_STYLE 描述声音）
+MIMO_TTS_MODEL = "mimo-v2.5-tts"
+
+# 预设音色（仅 mimo-v2.5-tts 模型生效，voicedesign 模型忽略此项）
+# 可选: mimo_default, 冰糖, 茉莉, 苏打, 白桦, Mia, Chloe, Milo, Dean
+MIMO_TTS_VOICE = "mimo_default"
+
+# 朗读风格 / 音色描述（根据模型类型有不同含义）:
+#   预设音色模式: 控制语气/情感，如 "用自然、亲切的语气朗读"
+#   voicedesign 模式: 描述想要的音色特征，如:
+#     - 游戏直播: "年轻活力的男声，热情有力，像游戏主播激情解说，语速稍快"
+#     - 温柔女声: "温暖自然的女声，发音清晰，语调温柔，适合电台风格"
+#     - 沉稳解说: "成熟稳重的男声，中气十足，干净利落，适合专业解说"
+MIMO_TTS_STYLE = "年轻活力的女声，热情有力"
+
+# 音频格式: "mp3" 或 "wav"
+MIMO_TTS_FORMAT = "mp3"
 
 # ==================== 防止冷场配置 ====================
 # 是否启用反冷场（无弹幕时自动播报预设话术）
