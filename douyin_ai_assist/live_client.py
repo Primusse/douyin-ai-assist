@@ -13,6 +13,7 @@ import websocket
 from .config import ROOM_ID
 from .sign import get_sign
 from .message_parser import MessageParser
+from .cold_field_manager import ColdFieldManager
 from .douyin.douyin_pb2 import PushFrame
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,11 @@ class DouYinLive:
 
         self._ws = None
         self._heartbeat_stop = threading.Event()
-        self._parser = MessageParser(on_stream_end=self._stop)
+        self._cold_field = ColdFieldManager()
+        self._parser = MessageParser(
+            on_stream_end=self._stop,
+            cold_field_manager=self._cold_field,
+        )
 
     def start(self):
         """启动连接：获取房间信息 → 生成签名 → 建立 WebSocket"""
@@ -54,6 +59,7 @@ class DouYinLive:
     def _stop(self):
         """停止连接"""
         self._heartbeat_stop.set()
+        self._cold_field.stop()
         if self._ws:
             self._ws.close()
 
@@ -133,6 +139,7 @@ class DouYinLive:
         """连接建立成功"""
         logger.info("[系统] 连接成功，开始接收弹幕...")
         self._heartbeat_stop.clear()
+        self._cold_field.start()
         threading.Thread(target=self._heartbeat, daemon=True).start()
 
     def _on_message(self, ws, message):
@@ -149,6 +156,7 @@ class DouYinLive:
     def _on_close(self, ws, close_status_code, close_msg):
         """WebSocket 关闭"""
         self._heartbeat_stop.set()
+        self._cold_field.stop()
         logger.info("[系统] 连接已关闭")
 
     def _heartbeat(self):

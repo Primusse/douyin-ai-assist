@@ -6,6 +6,8 @@ Protobuf 消息解析与分发
 import gzip
 import json
 import logging
+import random
+import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
@@ -17,7 +19,10 @@ from .douyin.douyin_pb2 import (
 )
 from . import danmaku_filter
 from . import ai_replier
-from .config import REPLY_FILE, TTS_ENABLED
+from .config import (
+    REPLY_FILE, TTS_ENABLED,
+    WELCOME_ENABLED, WELCOME_COOLDOWN, WELCOME_MESSAGES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +37,18 @@ class MessageParser:
     - 在后台线程中生成 AI 回复
     """
 
-    def __init__(self, on_stream_end=None):
+    def __init__(self, on_stream_end=None, cold_field_manager=None):
         """
         Args:
             on_stream_end: 直播结束时的回调函数
+            cold_field_manager: 冷场管理器实例（可选）
         """
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='ai_reply')
         self._on_stream_end = on_stream_end
+        self._cold_field_manager = cold_field_manager
+
+        # 欢迎冷却记录: {user_id: last_welcome_time}
+        self._welcome_cooldowns = {}
 
         # 消息类型 -> 处理函数的映射表
         self._handlers = {
@@ -96,6 +106,10 @@ class MessageParser:
 
         user_name = message.user.nickname
         content = message.content
+
+        # 通知冷场管理器：有弹幕到达
+        if self._cold_field_manager:
+            self._cold_field_manager.notify_danmaku()
 
         # 过滤
         if not danmaku_filter.should_reply(user_name, content):
@@ -177,8 +191,45 @@ class MessageParser:
         pass
 
     def _handle_member(self, payload):
-        """进入直播间消息"""
-        pass
+        """进入直播间消息 - 欢迎新人"""
+        if not WELCOME_ENABLED or not WELCOME_MESSAGES:
+            return
+
+        # TTS 忙碌时跳过（正在回答问题，不打断）
+        if TTS_ENABLED:
+            from .tts_engine import is_busy
+            if is_busy():
+                return
+
+        message = MemberMessage()
+        message.ParseFromString(payload)
+
+        user = message.user
+        user_id = str(user.id)
+        user_name = user.nickname
+
+        if not user_name:
+            return
+
+        # 冷却检查：同一用户短时间内不重复欢迎
+        now = time.time()
+        last_welcome = self._welcome_cooldowns.get(user_id, 0)
+        if now - last_welcome < WELCOME_COOLDOWN:
+            return
+
+        # 随机选择一条欢迎语
+        template = random.choice(WELCOME_MESSAGES)
+        welcome_text = template.replace("{user}", user_name)
+
+        logger.info(f"[欢迎] {welcome_text}")
+
+        # 记录冷却时间
+        self._welcome_cooldowns[user_id] = now
+
+        # TTS 播报欢迎语
+        if TTS_ENABLED:
+            from .tts_engine import speak
+            speak(welcome_text)
 
     def _handle_social(self, payload):
         """关注消息"""

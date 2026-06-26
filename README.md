@@ -38,6 +38,8 @@
 | 智能缓存 | LRU 缓存最近 100 条回复，相同问题直接命中 |
 | 意图过滤 | 自动过滤无效弹幕、指定用户/关键词，支持电商模式 |
 | TTS 语音播报 | AI 回复通过微软 Edge TTS 自动朗读 |
+| 防止冷场 | 无弹幕时自动播报预设话术，保持直播间活跃氛围 |
+| 欢迎新人 | 观众进入直播间时自动欢迎，支持冷却机制防止刷屏 |
 | 自动重连 | 网络断开自动恢复，支持无人值守运行 |
 
 ---
@@ -211,6 +213,51 @@ REPLY_TEMPLATES = [
 | `zh-CN-XiaoyiNeural` | 女声，温柔甜美 |
 | `zh-CN-YunjianNeural` | 男声，成熟稳重 |
 
+### 防止冷场配置
+
+无弹幕时自动随机播报预设话术，保持直播间活跃，避免冷场：
+
+```python
+COLD_FIELD_ENABLED = True           # 是否启用
+COLD_FIELD_INTERVAL = 5             # 无弹幕多少秒后播报
+COLD_FIELD_PHRASES = [              # 话术列表，随机选择
+    "大家好呀，欢迎来到直播间~有什么问题可以发弹幕问我哦！",
+    "喜欢主播的可以点个关注，每天都有精彩内容！",
+    # ... 可自行添加更多
+]
+```
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `COLD_FIELD_ENABLED` | `True` | 是否启用反冷场 |
+| `COLD_FIELD_INTERVAL` | `5` | 间隔秒数，无弹幕超过该时长后播报一次 |
+| `COLD_FIELD_PHRASES` | `[...]` | 话术列表，随机选择一条播报 |
+
+> **注意**：冷场话术仅在 TTS 空闲（不在回答弹幕问题）时才会播报，不会打断正常互动。
+> 设为 `COLD_FIELD_ENABLED = False` 或 `COLD_FIELD_PHRASES = []` 可禁用该功能。
+
+### 欢迎新人配置
+
+观众进入直播间时自动欢迎，支持冷却机制防止刷屏：
+
+```python
+WELCOME_ENABLED = True              # 是否启用
+WELCOME_COOLDOWN = 10               # 同用户冷却秒数
+WELCOME_MESSAGES = [                # 欢迎语模板，{user} 替换为用户名
+    "欢迎 @{user} 进入直播间~",
+    "@{user} 来啦！欢迎欢迎！",
+    # ... 可自行添加更多
+]
+```
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `WELCOME_ENABLED` | `True` | 是否启用新人欢迎 |
+| `WELCOME_COOLDOWN` | `10` | 同一用户冷却秒数，防止频繁进出刷屏 |
+| `WELCOME_MESSAGES` | `[...]` | 欢迎语模板列表，`{user}` 自动替换为用户名 |
+
+> **注意**：欢迎语仅在 TTS 空闲时播报，不会打断正在进行的 AI 回复。同一用户在冷却时间内重复进出不会触发欢迎。
+
 ---
 
 ## 项目结构
@@ -223,10 +270,11 @@ douyin-live-ai/
 ├── README.md
 │
 ├── douyin_ai_assist/              # 核心代码包
-│   ├── config.py                # 全局配置（直播间、AI、TTS、过滤、模板）
+│   ├── config.py                # 全局配置（直播间、AI、TTS、过滤、模板、冷场、欢迎）
 │   ├── live_client.py           # WebSocket 连接与生命周期管理
 │   ├── message_parser.py        # Protobuf 消息解析与分发
 │   ├── danmaku_filter.py        # 弹幕过滤规则
+│   ├── cold_field_manager.py    # 冷场管理器（定时播报预设话术）
 │   ├── ai_client.py             # 通用 AI 客户端（OpenAI 兼容 / Claude）
 │   ├── ai_replier.py            # AI 回复生成（模板 → 缓存 → API）
 │   ├── reply_templates.py       # 回复模板匹配引擎
@@ -254,8 +302,9 @@ douyin-live-ai/
 |------|------|
 | `config.py` | 所有可配置项集中管理，启动时校验必填项 |
 | `live_client.py` | 建立 WebSocket 连接、发送心跳包、管理连接生命周期 |
-| `message_parser.py` | 解析 Protobuf 二进制消息，按类型分发给对应 handler |
+| `message_parser.py` | 解析 Protobuf 二进制消息，按类型分发给对应 handler（含欢迎新人） |
 | `danmaku_filter.py` | 弹幕过滤：长度、用户、关键词、电商模式 |
+| `cold_field_manager.py` | 冷场管理：定时检测弹幕间隔，空闲时播报预设话术 |
 | `ai_client.py` | AI 客户端抽象层，支持 OpenAI 兼容格式和 Claude 格式 |
 | `ai_replier.py` | 回复生成主逻辑：模板匹配 → 缓存查找 → API 调用 |
 | `reply_templates.py` | 关键词匹配引擎，支持变量替换 |
