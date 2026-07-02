@@ -10,7 +10,7 @@ import logging
 from collections import OrderedDict
 from typing import Optional, Dict
 
-from .config import REPLY_FILE
+from .config import REPLY_FILE, REPLY_CACHE_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,10 @@ def get_cache() -> ReplyCache:
 
 
 def get_cached_reply(user_message: str) -> Optional[str]:
-    """获取缓存的回复内容，未命中返回 None"""
+    """获取缓存的回复内容，未命中返回 None（受 REPLY_CACHE_ENABLED 控制）"""
+    if not REPLY_CACHE_ENABLED:
+        return None
+
     cache = get_cache()
     cached = cache.get(user_message)
 
@@ -131,7 +134,10 @@ def get_cached_reply(user_message: str) -> Optional[str]:
 
 
 def cache_reply(user_message: str, reply: str, timestamp: str = None):
-    """缓存一条回复"""
+    """缓存一条回复（受 REPLY_CACHE_ENABLED 控制）"""
+    if not REPLY_CACHE_ENABLED:
+        return
+
     if timestamp is None:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 

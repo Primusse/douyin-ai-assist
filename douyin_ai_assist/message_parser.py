@@ -157,6 +157,8 @@ class MessageParser:
             cache_status = "[模板]"
         elif result.get('from_cache'):
             cache_status = "[缓存]"
+        elif result.get('from_history'):
+            cache_status = "[API·历史]"
         else:
             cache_status = "[API]"
         print(f"\n{'='*60}")

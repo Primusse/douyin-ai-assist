@@ -37,7 +37,7 @@
 | 回复模板 | 高频问题配置固定回复模板，命中关键词直接回复，零 API 消耗 |
 | 智能缓存 | LRU 缓存最近 100 条回复，相同问题直接命中 |
 | 意图过滤 | 自动过滤无效弹幕、指定用户/关键词，支持电商模式 |
-| TTS 语音播报 | AI 回复通过微软 Edge TTS 自动朗读 |
+| TTS 语音播报 | AI 回复自动朗读，支持微软 Edge TTS（免费）和小米 MiMo TTS |
 | 防止冷场 | 无弹幕时自动播报预设话术，保持直播间活跃氛围 |
 | 欢迎新人 | 观众进入直播间时自动欢迎，支持冷却机制防止刷屏 |
 | 自动重连 | 网络断开自动恢复，支持无人值守运行 |
@@ -198,9 +198,18 @@ REPLY_TEMPLATES = [
 
 ### TTS 语音合成配置
 
+支持两种 TTS 引擎，通过 `TTS_ENGINE` 切换：
+
+```python
+TTS_ENGINE = "edge"   # "edge"（微软 Edge TTS，免费）/ "mimo"（小米 MiMo TTS，需 API Key）
+```
+
+#### Edge TTS（默认，免费）
+
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | `TTS_ENABLED` | `True` | 是否启用语音播报 |
+| `TTS_ENGINE` | `"edge"` | TTS 引擎选择 |
 | `TTS_VOICE` | `"zh-CN-XiaoyiNeural"` | 语音角色 |
 | `TTS_RATE` | `"+0%"` | 语速，`+20%` 加速，`-20%` 减速 |
 
@@ -212,6 +221,44 @@ REPLY_TEMPLATES = [
 | `zh-CN-YunxiNeural` | 男声，年轻活力 |
 | `zh-CN-XiaoyiNeural` | 女声，温柔甜美 |
 | `zh-CN-YunjianNeural` | 男声，成熟稳重 |
+
+#### 小米 MiMo TTS（需 API Key）
+
+在 [MiMo 开放平台](https://platform.xiaomimimo.com/#/console/api-keys) 创建 API Key 后配置：
+
+```python
+TTS_ENGINE = "mimo"
+MIMO_API_KEY = os.environ.get("MIMO_API_KEY", "your-key-here")
+
+# 两种模式任选其一：
+
+# 模式1: 预设音色
+MIMO_TTS_MODEL = "mimo-v2.5-tts"
+MIMO_TTS_VOICE = "mimo_default"       # mimo_default / 冰糖 / 茉莉 / 苏打 / 白桦 / Mia / Chloe / Milo / Dean
+MIMO_TTS_STYLE = "用活泼、热情的语气朗读"
+
+# 模式2: 文字描述音色（推荐，可自由定制音色）
+MIMO_TTS_MODEL = "mimo-v2.5-tts-voicedesign"
+MIMO_TTS_STYLE = "年轻活力的男声，热情有力，像游戏主播激情解说，语速稍快"
+```
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `MIMO_API_KEY` | `""` | MiMo API Key，推荐通过环境变量设置 |
+| `MIMO_API_BASE_URL` | `https://api.xiaomimimo.com/v1` | API 地址 |
+| `MIMO_TTS_MODEL` | `"mimo-v2.5-tts"` | 模型：预设音色 / voicedesign（文字描述音色） |
+| `MIMO_TTS_VOICE` | `"mimo_default"` | 预设音色名（voicedesign 模式忽略） |
+| `MIMO_TTS_STYLE` | `"..."` | 朗读风格或音色描述 |
+| `MIMO_TTS_FORMAT` | `"mp3"` | 音频格式：`mp3` 或 `wav` |
+
+**voicedesign 音色描述参考：**
+
+| 场景 | 描述示例 |
+|------|---------|
+| 游戏解说 | `年轻活力的男声，热情有力，像游戏主播激情解说，语速稍快` |
+| 活泼互动 | `活泼开朗的年轻女声，甜美俏皮，像朋友聊天一样自然亲切` |
+| 沉稳讲解 | `成熟稳重的男声，中气十足，干净利落不拖沓，带一点磁性` |
+| 温柔陪伴 | `温暖柔和的女声，发音清晰语调自然，像深夜电台主播` |
 
 ### 防止冷场配置
 
@@ -309,7 +356,7 @@ douyin-live-ai/
 | `ai_replier.py` | 回复生成主逻辑：模板匹配 → 缓存查找 → API 调用 |
 | `reply_templates.py` | 关键词匹配引擎，支持变量替换 |
 | `reply_cache.py` | LRU 缓存，避免重复调用 API |
-| `tts_engine.py` | TTS 合成与播放，单队列策略只播最新一条 |
+| `tts_engine.py` | TTS 合成与播放，支持 Edge / 小米 MiMo 双引擎，单队列策略 |
 | `sign.py` | 调用 Node.js 子进程生成抖音 X-Bogus 签名 |
 | `crypto.py` | MD5 哈希工具 |
 
@@ -363,6 +410,19 @@ https://live.douyin.com/349873582969
 **Q: 如何切换 AI 服务商？**
 
 A: 修改 `config.py` 中的 `AI_API_URL` 和 `AI_MODEL` 即可，详见上方配置说明。
+
+**Q: 如何切换 TTS 引擎？**
+
+A: 修改 `config.py` 中 `TTS_ENGINE` 即可：
+- `"edge"` — 微软 Edge TTS，免费无需配置
+- `"mimo"` — 小米 MiMo TTS，需在 [MiMo 开放平台](https://platform.xiaomimimo.com/#/console/api-keys) 创建 API Key 后填入 `MIMO_API_KEY`
+
+**Q: MiMo TTS 报 400 错误怎么办？**
+
+A: 常见原因：
+1. 认证方式：MiMo API 使用 `Authorization: Bearer` 认证，非自定义 header
+2. 音色名称：预设音色必须是 `mimo_default / 冰糖 / 茉莉 / 苏打 / 白桦 / Mia / Chloe / Milo / Dean` 之一
+3. 模型名称：大小写敏感，必须全小写如 `mimo-v2.5-tts`
 
 ---
 

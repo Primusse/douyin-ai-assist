@@ -61,9 +61,19 @@ AI_TEMPERATURE = 0.7
 # 最大 token 数
 AI_MAX_TOKENS = 1000
 
-# ==================== 缓存配置 ====================
+# ==================== 缓存与对话配置 ====================
 # 回复记录文件路径
 REPLY_FILE = os.path.join(DATA_DIR, "ai_replies.jsonl")
+
+# 是否启用回复缓存（True=相同问题复用缓存回复不调API，False=每次都调AI）
+REPLY_CACHE_ENABLED = True
+
+# 多轮对话历史轮数（0=禁用，建议 5-15）
+# 开启后 AI 能看到最近 N 轮对话上下文，回复更连贯自然
+CONVERSATION_HISTORY_SIZE = 10
+
+# AI 回复最大长度（字数），太长观众没耐心看完
+REPLY_MAX_LENGTH = 40
 
 # ==================== TTS 语音合成配置 ====================
 # 是否启用 TTS（True=AI回复自动朗读，False=仅文字输出）
